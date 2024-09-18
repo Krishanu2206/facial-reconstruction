@@ -1,0 +1,4 @@
+data/raw/
+data/processed/
+.idea
+__pycache__
