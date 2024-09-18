@@ -27,6 +27,21 @@ class Engine:
                  device: torch.device,
                  epochs: int) -> None:
         
+        """
+        Initialize the Engine object
+
+        Args:
+            g_model (nn.Module): Generator model
+            d_model (nn.Module): Discriminator model
+            g_loss (nn.Module): Generator loss function
+            d_loss (nn.Module): Discriminator loss function
+            g_optimizer (torch.optim): Generator optimizer
+            d_optimizer (torch.optim): Discriminator optimizer
+            train_dataloader (DataLoader): Training data loader
+            test_dataloader (DataLoader): Testing data loader
+            device (torch.device): Device to use for training and inference
+            epochs (int): Number of epochs to train for
+        """
         self.g_model = g_model
         self.d_model = d_model
         self.g_loss = g_loss
@@ -39,6 +54,14 @@ class Engine:
         self.epochs = epochs
         
     def train(self):
+        """
+        Train the generator and discriminator for the specified number of epochs.
+
+        Args:
+
+        Returns:
+        """
+       
         best = float('inf')
         for epoch in range(self.epochs):
             g_loss, d_loss = self._train_one_epoch()
@@ -57,11 +80,26 @@ class Engine:
     
     @abstractmethod
     def save_model(model: nn.Module, save_dir: str = "models/saved_models", model_name="best.pt"):
+        """
+        Saves the model state dictionary to the specified save directory.
+
+        Args:
+            model (nn.Module): Model to save
+            save_dir (str, optional): Directory to save the model. Defaults to "models/saved_models".
+            model_name (str, optional): Name of the saved model. Defaults to "best.pt".
+        """
         save_path = Path(save_dir)
         save_path.mkdir(exist_ok=True, parents=True)
         torch.save(model.state_dict(), save_path / model_name)
     
     def _test_model(self):
+        """
+        Evaluate the generator and discriminator on the test set.
+
+        Returns:
+            g_loss: The generator loss on the test set.
+            d_loss: The discriminator loss on the test set.
+        """
         self.g_model.eval()
         self.d_model.eval()
         with torch.inference_mode():
@@ -82,6 +120,21 @@ class Engine:
                 return g_loss, d_loss
                 
     def _discriminator_loss(self, low_res, real_images, real_labels, fake_labels):
+        """
+        Calculate the discriminator loss. This function takes in the low-resolution images, real
+        high-resolution images, real labels, and fake labels. It calculates the discriminator loss
+        by passing the real and fake images through the discriminator and calculating the binary
+        cross-entropy loss.
+
+        Args:
+            low_res (torch.Tensor): Low-resolution images
+            real_images (torch.Tensor): Real high-resolution images
+            real_labels (torch.Tensor): Real labels
+            fake_labels (torch.Tensor): Fake labels
+
+        Returns:
+            d_loss (torch.Tensor): The discriminator loss
+        """
         real_patch = self.d_model(low_res, real_images)
         
         fake_images = self.g_model(low_res.to(self.device))
@@ -94,6 +147,20 @@ class Engine:
         return d_loss
 
     def _generator_loss(self, low_res, real_images, real_labels):
+        """
+        Calculate the generator loss. This function takes in the low-resolution images, real
+        high-resolution images, and real labels. It calculates the generator loss
+        by passing the fake images through the discriminator and calculating the binary
+        cross-entropy loss.
+
+        Args:
+            low_res (torch.Tensor): Low-resolution images
+            real_images (torch.Tensor): Real high-resolution images
+            real_labels (torch.Tensor): Real labels
+
+        Returns:
+            g_loss (torch.Tensor): The generator loss
+        """
         fake_images = self.g_model(low_res)
         fake_patch = self.d_model(low_res, fake_images)
         
@@ -104,6 +171,16 @@ class Engine:
         return g_loss
         
     def _train_one_epoch(self):
+        """
+        Train the generator and discriminator for one epoch.
+
+        Args:
+            None
+
+        Returns:
+            tuple: (generator loss, discriminator loss)
+        """
+        
         per_epoch_loss_g = 0.0
         per_epoch_loss_d = 0.0
         

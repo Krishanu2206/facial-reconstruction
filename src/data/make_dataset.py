@@ -11,6 +11,16 @@ class CreateDataset(Dataset):
                  feature_transform: transforms.Compose, 
                  target_transform: transforms.Compose):
         
+        """
+        Initialize the CreateDataset dataset class.
+
+        Args:
+            lowResImagesPath (str | Path): The path to the folder containing the low-resolution images.
+            highResImagesPath (str | Path): The path to the folder containing the high-resolution images.
+            feature_transform (torchvision.transforms.Compose): The transform to apply to the low-resolution images.
+            target_transform (torchvision.transforms.Compose): The transform to apply to the high-resolution images.
+        """
+
         self.lowResImagesPath = lowResImagesPath
         self.highResImagesPath = highResImagesPath
         self.lowResImages = os.listdir(lowResImagesPath)

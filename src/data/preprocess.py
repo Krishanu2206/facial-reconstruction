@@ -12,6 +12,15 @@ class PreProcessTemplate(ABC):
 class ProcessFeatures(PreProcessTemplate):
 
     def process(img):
+        """
+        Process an image for training.
+        
+        Args:
+            img: A PIL image.
+            
+        Returns:
+            A tensor of size (3, 256, 256) that is ready for training.
+        """
         transformation = transforms.Compose([
             transforms.Resize((286, 286)),
             transforms.RandomRotation((-15, 15)),
@@ -26,6 +35,15 @@ class ProcessFeatures(PreProcessTemplate):
 class ProcessTarget(PreProcessTemplate):
 
     def process(img):
+        """
+        Process an image for target.
+        
+        Args:
+            img: A PIL image.
+            
+        Returns:
+            A tensor of size (3, 256, 256) that is ready for training.
+        """
         target_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize((256, 256)),

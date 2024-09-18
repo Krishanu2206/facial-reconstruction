@@ -27,6 +27,13 @@ EPOCHS = 100
 
 
 def init_model():
+    """
+    Initialize the Engine object with the appropriate models, loss functions, optimizers, 
+    data loaders, device, and epochs.
+
+    Returns:
+        Engine: The Engine object with all the parameters set.
+    """
     g_model = Generator().to(device)
     d_model = Discriminator().to(device)
 
