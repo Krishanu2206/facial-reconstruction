@@ -25,36 +25,41 @@ logging.info(f"Using Device: {device}")
 BATCH_SIZE = 32
 EPOCHS = 100
 
-g_model = Generator().to(device)
-d_model = Discriminator().to(device)
 
-d_loss = nn.BCELoss()
-g_loss = nn.L1Loss()
+def init_model():
+    g_model = Generator().to(device)
+    d_model = Discriminator().to(device)
 
-g_optimizer = torch.optim.Adam(g_model.parameters(), lr=0.0002, betas=(0.5, 0.999))
-d_optimizer = torch.optim.Adam(d_model.parameters(), lr=0.0002, betas=(0.5, 0.999))
+    d_loss = nn.BCELoss()
+    g_loss = nn.L1Loss()
 
-
-
-train_dataset = CreateDataset(lowResImagesPath="data/processed/train/low_res",
-                              highResImagesPath="data/processed/train/high_res",
-                              feature_transform=ProcessFeatures,
-                              target_transform=ProcessTarget)
-
-test_dataset = CreateDataset(lowResImagesPath="data/processed/test/low_res",
-                             highResImagesPath="data/processed/test/high_res",
-                             feature_transform=ProcessFeatures,
-                             target_transform=ProcessTarget)
-
-train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+    g_optimizer = torch.optim.Adam(g_model.parameters(), lr=0.0002, betas=(0.5, 0.999))
+    d_optimizer = torch.optim.Adam(d_model.parameters(), lr=0.0002, betas=(0.5, 0.999))
 
 
-engine = Engine(g_model=g_model, d_model=d_model,
-               g_loss=g_loss, d_loss=d_loss,
-               g_optimizer=g_optimizer, d_optimizer=d_optimizer,
-               train_dataloader=train_loader, test_dataloader=test_loader,
-               device=device, epochs=EPOCHS)
+
+    train_dataset = CreateDataset(lowResImagesPath="data/processed/train/low_res",
+                                highResImagesPath="data/processed/train/high_res",
+                                feature_transform=ProcessFeatures,
+                                target_transform=ProcessTarget)
+
+    test_dataset = CreateDataset(lowResImagesPath="data/processed/test/low_res",
+                                highResImagesPath="data/processed/test/high_res",
+                                feature_transform=ProcessFeatures,
+                                target_transform=ProcessTarget)
+
+    train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 
-engine.train()
+    engine = Engine(g_model=g_model, d_model=d_model,
+                g_loss=g_loss, d_loss=d_loss,
+                g_optimizer=g_optimizer, d_optimizer=d_optimizer,
+                train_dataloader=train_loader, test_dataloader=test_loader,
+                device=device, epochs=EPOCHS)
+
+    return engine
+
+if __name__ == "__main__":
+    engine = init_model()
+    engine.train()
