@@ -38,5 +38,5 @@ def check_files2():
     print("all the paths exist")
     
 if __name__ == "__main__":
-    check_files2()
-    
+    # check_files2()
+    print(img2annot)
