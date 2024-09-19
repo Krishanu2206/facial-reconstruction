@@ -28,7 +28,15 @@ def check_files():
             assert img_path.is_file(), f"error at {img_path}"
     print("all the paths exist")
     
+
+def check_files2():
+    all_faces = list(Path("data/processed").glob("*/*/*.jpg"))
+    all_faces = list(map(lambda x: str(x.stem) + ".jpg", all_faces))
     
+    for img in image_list:
+        assert img in all_faces, f"error at {img}"
+    print("all the paths exist")
     
 if __name__ == "__main__":
-    check_files()
+    check_files2()
+    
