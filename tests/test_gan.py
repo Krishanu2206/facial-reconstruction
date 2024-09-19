@@ -27,7 +27,6 @@ class TestLoader(unittest.TestCase):
 
         g_model = Generator()
         
-        logging.info("Running generator forward pass")
         output = g_model(low_res_image)
 
         self.assertTrue(output.shape == (32, 3, 256, 256))
@@ -44,11 +43,18 @@ class TestLoader(unittest.TestCase):
 
         d_model = Discriminator()
         
-        logging.info("Running dsicriminator forward pass")
         output = d_model(low_res_image, high_res_image)
 
         self.assertTrue(output.shape == (32, 1, 30, 30))
         
+    def test_output_value(self):
+        low_res_image = torch.randn((32, 3, 256, 256))  # Use torch.randn to create a random tensor with shape
 
+        g_model = Generator()
+        
+        output = g_model(low_res_image)
+
+        self.assertTrue(output.max() <= 1)
+        
 if __name__ == "__main__":
     unittest.main()
