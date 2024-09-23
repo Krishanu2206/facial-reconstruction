@@ -76,3 +76,7 @@ if __name__ == "__main__":
     input_directory = 'E:/computer vision/facial_reconstruction_project/data/raw/high_quality_images/mugshot_frontal_original_all'  
     output_directory = 'E:/computer vision/facial_reconstruction_project/data/rgb&heatMap/highres'  
     process_directory(input_directory, output_directory)
+
+    low_res_dir = 'E:/computer vision/facial_reconstruction_project/data/raw/cctv_footage/surveillance_cameras_all'
+    output_directory = 'E:/computer vision/facial_reconstruction_project/data/rgb&heatMap/lowres'
+    process_directory(low_res_dir, output_directory)
