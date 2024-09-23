@@ -71,7 +71,7 @@ highResImagesPath="$rgb_heatmap_high"
 train_dir="processed/train"
 test_dir="processed/test"
 
-python data_setup.py --lowResImagesPath "$lowResImagesPath" --highResImagesPath "$highResImagesPath" --train_dir "$train_dir" --test_dir "$test_dir" || { echo "Training failed"; exit 6; }
+python data_setup.py --lowResImagesPath "$lowResImagesPath" --highResImagesPath "$highResImagesPath" --train_dir "$train_dir" --test_dir "$test_dir" || { echo "Data setup failed"; exit 6; }
 
 rm -r $rgb_heatmap_low $rgb_heatmap_high
 
