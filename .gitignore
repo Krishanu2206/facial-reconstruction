@@ -2,3 +2,4 @@ data/raw/
 data/processed/
 .idea
 __pycache__
+data/rgb&heatMap
