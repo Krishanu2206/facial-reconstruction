@@ -12,6 +12,11 @@ def setup_data(lowResImagesPath, highResImagesPath, train_dir, test_dir):
     train_dir.mkdir(exist_ok=True, parents=True)
     test_dir.mkdir(exist_ok=True, parents=True)
 
+    #################
+    # because of memory constrain
+    highResImages = random.sample(highResImages, k=10)
+    #################
+    
     # Splitting high-res images
     train_high_res = random.sample(highResImages, int(train_split * len(highResImages)))
     test_high_res = [img for img in highResImages if img not in train_high_res]
