@@ -7,19 +7,23 @@ from pathlib import Path
 class CreateDataset(Dataset):
     def __init__(self, lowResImagesPath: str | Path, highResImagesPath: str | Path, 
                  feature_transform: transforms.Compose, target_transform: transforms.Compose):
-        """
-        Initialize the CreateDataset dataset class.
-
-        Args:
-            lowResImagesPath (str | Path): The path to the folder containing the low-resolution .npy files.
-            highResImagesPath (str | Path): The path to the folder containing the high-resolution .npy files.
-            feature_transform (torchvision.transforms.Compose): The transform to apply to the low-resolution arrays.
-            target_transform (torchvision.transforms.Compose): The transform to apply to the high-resolution arrays.
-        """
         self.lowResImagesPath = Path(lowResImagesPath)
         self.highResImagesPath = Path(highResImagesPath)
+        
+        print(f"Low-res path: {self.lowResImagesPath}")
+        print(f"High-res path: {self.highResImagesPath}")
+        
         self.lowResImages = [f for f in os.listdir(lowResImagesPath) if f.endswith('.npy')]
         self.highResImages = [f for f in os.listdir(highResImagesPath) if f.endswith('.npy')]
+        
+        print(f"Number of low-res images found: {len(self.lowResImages)}")
+        print(f"Number of high-res images found: {len(self.highResImages)}")
+        
+        if len(self.lowResImages) == 0:
+            print("Warning: No low-res .npy files found!")
+        if len(self.highResImages) == 0:
+            print("Warning: No high-res .npy files found!")
+        
         self.transform = feature_transform
         self.target_transform = target_transform
 
@@ -38,8 +42,20 @@ class CreateDataset(Dataset):
         high_res_img = np.load(high_image_path)
 
         if self.transform:
-            low_res_img = self.transform(low_res_img)
+            low_res_img = self.transform.process(low_res_img)
         if self.target_transform:
-            high_res_img = self.target_transform(high_res_img)
+            high_res_img = self.target_transform.process(high_res_img)
 
         return low_res_img, high_res_img
+    
+    
+if __name__ == "__main__":
+    from preprocess import ProcessFeatures, ProcessTarget
+    dataset = CreateDataset(
+        lowResImagesPath="data/rgb&heatMap/lowres",
+        highResImagesPath="data/rgb&heatMap/highres",
+        feature_transform=ProcessFeatures,
+        target_transform=ProcessTarget
+    )
+
+    print(len(dataset))

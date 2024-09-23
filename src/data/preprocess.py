@@ -22,12 +22,12 @@ class ProcessFeatures(PreProcessTemplate):
             A tensor of size (3, 256, 256) that is ready for training.
         """
         transformation = transforms.Compose([
+            transforms.ToTensor(),
             transforms.Resize((286, 286)),
             transforms.RandomRotation((-15, 15)),
             transforms.RandomHorizontalFlip(0.5),
             transforms.RandomPerspective(0.5),
             transforms.RandomCrop((256, 256)),
-            transforms.ToTensor(),
         ])
         return transformation(img)
     

@@ -27,13 +27,6 @@ EPOCHS = 100
 
 
 def init_model():
-    """
-    Initialize the Engine object with the appropriate models, loss functions, optimizers, 
-    data loaders, device, and epochs.
-
-    Returns:
-        Engine: The Engine object with all the parameters set.
-    """
     g_model = Generator(c_dim=7).to(device)
     d_model = Discriminator().to(device)
 
@@ -43,21 +36,26 @@ def init_model():
     g_optimizer = torch.optim.Adam(g_model.parameters(), lr=0.0002, betas=(0.5, 0.999))
     d_optimizer = torch.optim.Adam(d_model.parameters(), lr=0.0002, betas=(0.5, 0.999))
 
+    try:
+        train_dataset = CreateDataset(lowResImagesPath="data/processed/train/low_res",
+                                    highResImagesPath="data/processed/train/high_res",
+                                    feature_transform=ProcessFeatures,
+                                    target_transform=ProcessTarget)
 
+        test_dataset = CreateDataset(lowResImagesPath="data/processed/test/low_res",
+                                    highResImagesPath="data/processed/test/high_res",
+                                    feature_transform=ProcessFeatures,
+                                    target_transform=ProcessTarget)
 
-    train_dataset = CreateDataset(lowResImagesPath="data/processed/train/low_res",
-                                highResImagesPath="data/processed/train/high_res",
-                                feature_transform=ProcessFeatures,
-                                target_transform=ProcessTarget)
+        if len(train_dataset) == 0 or len(test_dataset) == 0:
+            raise ValueError("One or both datasets are empty")
 
-    test_dataset = CreateDataset(lowResImagesPath="data/processed/test/low_res",
-                                highResImagesPath="data/processed/test/high_res",
-                                feature_transform=ProcessFeatures,
-                                target_transform=ProcessTarget)
+        train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+        test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-    train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
+    except Exception as e:
+        logging.error(f"Error creating datasets or dataloaders: {str(e)}")
+        raise
 
     engine = Engine(g_model=g_model, d_model=d_model,
                 g_loss=g_loss, d_loss=d_loss,

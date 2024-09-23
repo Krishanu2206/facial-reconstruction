@@ -1,53 +1,66 @@
 import random
 import os
-import sys
 import shutil
 from pathlib import Path
+import argparse
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
+def setup_data(lowResImagesPath, highResImagesPath, train_dir, test_dir):
+    lowResImages = list(lowResImagesPath.glob("*.npy"))
+    highResImages = list(highResImagesPath.glob("*.npy"))
 
-lowResImagesPath = Path("data/raw/cctv_footage/surveillance_cameras_all")
-lowResImages = list(lowResImagesPath.glob("*.jpg"))  # 2860
+    train_split = 0.8
+    train_dir.mkdir(exist_ok=True, parents=True)
+    test_dir.mkdir(exist_ok=True, parents=True)
 
-highResImagesPath = Path("data/raw/high_quality_images/mugshot_frontal_original_all")
-highResImages = list(highResImagesPath.glob("*.jpg"))  # 130
+    # Splitting high-res images
+    train_high_res = random.sample(highResImages, int(train_split * len(highResImages)))
+    test_high_res = [img for img in highResImages if img not in train_high_res]
 
-train_split = 0.8
-train_dir = Path("data/processed/train")
-test_dir = Path("data/processed/test")
-train_dir.mkdir(exist_ok=True, parents=True)
-test_dir.mkdir(exist_ok=True, parents=True)
+    # Matching low-res images to high-res splits
+    train_low_res = [img for img in lowResImages if highResImagesPath / (img.stem.split("_")[0] + "_frontal_rgb_heatmaps" + img.suffix) in train_high_res]
+    test_low_res = [img for img in lowResImages if img not in train_low_res]
 
-train_high_res = random.sample(highResImages, int(train_split * len(highResImages)))
-test_high_res = [img for img in highResImages if img not in train_high_res]
+    print(f"Train high-res: {len(train_high_res)}, Test high-res: {len(test_high_res)}")
+    print(f"Train low-res: {len(train_low_res)}, Test low-res: {len(test_low_res)}")
+    print(f"Sample train high-res: {train_high_res[:4]}")
+    print(f"Sample train low-res: {train_low_res[:3]}")
 
-train_low_res = [img for img in lowResImages if highResImagesPath / (img.stem.split("_")[0] + "_frontal.jpg") in train_high_res]
-test_low_res = [img for img in lowResImages if img not in train_low_res]
+    copy_files(train_high_res, train_dir / "high_res")
+    copy_files(train_low_res, train_dir / "low_res")
+    copy_files(test_high_res, test_dir / "high_res")
+    copy_files(test_low_res, test_dir / "low_res")
 
-print(len(train_high_res), len(test_high_res))
-print(len(train_low_res), len(test_low_res))
-print(train_high_res[:4])
-print(train_low_res[:3])
-
-
-def copy_image(src, dest):
+def copy_files(src, dest):
     if not dest.exists():
         dest.mkdir(exist_ok=True, parents=True)
         print(f"Destination folder created: {dest}")
 
-    for idx, img in enumerate(src):
-        dest_img_path = dest / (img.stem.split('_')[0] + "_" + "_".join(img.stem.split('_')[1:]) + ".jpg")
-        shutil.copy(str(img), str(dest_img_path))
+    for idx, file in enumerate(src):
+        dest_file_path = dest / file.name
+        shutil.copy(str(file), str(dest_file_path))
 
         if idx % 100 == 0:
-            print(f"Completed copying image {idx + 1}/{len(src)}")
-            print(f"From {img} to {dest_img_path}")
-
+            print(f"Completed copying file {idx + 1}/{len(src)}")
+            print(f"From {file} to {dest_file_path}")
 
 if __name__ == "__main__":
+    # lowResImagesPath = Path("data/rgb&heatMap/lowres")
+    # highResImagesPath = Path("data/rgb&heatMap/highres")
+    # train_dir = Path("data/processed/train")
+    # test_dir = Path("data/processed/test")
 
-    copy_image(train_high_res, train_dir / "high_res")
-    copy_image(train_low_res, train_dir / "low_res")
+    # use argparse to take these 4 arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lowResImagesPath", type=str, required=True)
+    parser.add_argument("--highResImagesPath", type=str, required=True)
+    parser.add_argument("--train_dir", type=str, required=True)
+    parser.add_argument("--test_dir", type=str, required=True)
+    args = parser.parse_args()
 
-    copy_image(test_high_res, test_dir / "high_res")
-    copy_image(test_low_res, test_dir / "low_res")
+    lowResImagesPath = Path(args.lowResImagesPath)
+    highResImagesPath = Path(args.highResImagesPath)
+    train_dir = Path(args.train_dir)
+    test_dir = Path(args.test_dir)
+    
+
+    setup_data(lowResImagesPath, highResImagesPath, train_dir, test_dir)
