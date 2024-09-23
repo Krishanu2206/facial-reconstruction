@@ -6,11 +6,12 @@ import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from data.make_dataset import CreateDataset
-from models.model_builder import Generator, Discriminator
-from data.preprocess import ProcessFeatures, ProcessTarget
-from models.engine import Engine
+from src.data.make_dataset import CreateDataset
+from src.models.model_builder import Generator, Discriminator
+from src.data.preprocess import ProcessFeatures, ProcessTarget
+from src.models.engine import Engine
 
 
 # add logging basic config
