@@ -34,7 +34,7 @@ def init_model():
     Returns:
         Engine: The Engine object with all the parameters set.
     """
-    g_model = Generator().to(device)
+    g_model = Generator(c_dim=7).to(device)
     d_model = Discriminator().to(device)
 
     d_loss = nn.BCELoss()
