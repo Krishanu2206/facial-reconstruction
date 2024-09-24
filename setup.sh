@@ -3,9 +3,18 @@
 set -e
 
 if ! command -v python3 &> /dev/null; then
-    echo "Python3 is not installed. Please install Python3 first."
-    exit 1
+    echo "Python not found. Installing Python..."
+    sudo apt update
+    sudo apt install python3 -y
 fi
+
+# Check if python3-venv is installed
+if ! command -v python3 -m venv &> /dev/null; then
+    echo "python3-venv not found. Installing python3-venv..."
+    sudo apt install python3-venv -y
+fi
+
+echo "Python and python3-venv are installed."
 
 # Create a virtual environment named 'venv' if it doesn't exist
 if [ ! -d "venv" ]; then
