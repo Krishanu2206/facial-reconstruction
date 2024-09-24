@@ -5,6 +5,7 @@ import os
 
 mp_face_mesh = mp.solutions.face_mesh
 
+# Define facial landmarks of interest
 FACIAL_LANDMARKS = {
     'left_eye': [33, 133],
     'right_eye': [362, 263],
@@ -13,6 +14,7 @@ FACIAL_LANDMARKS = {
 }
 
 def generate_heatmap(image, landmark, size=(256, 256), sigma=15):
+    """Generate heatmap for a given landmark."""
     heatmap = np.zeros(size, dtype=np.float32)
     for lm in landmark:
         x = int(lm[0] * size[1])
@@ -24,59 +26,52 @@ def generate_heatmap(image, landmark, size=(256, 256), sigma=15):
     heatmap = np.clip(heatmap, 0, 1)
     return heatmap
 
-def process_image(image_path, output_dir, face_mesh):
-    image = cv2.imread(image_path)
-    image = cv2.resize(image, (256, 256))  # Resize to 256x256
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    results = face_mesh.process(image_rgb)
-
-    heatmaps = []
-
-    if results.multi_face_landmarks:
-        for face_landmarks in results.multi_face_landmarks:
-            landmarks = [(lm.x, lm.y) for lm in face_landmarks.landmark]
-
-            left_eye_heatmap = generate_heatmap(image, [landmarks[i] for i in FACIAL_LANDMARKS['left_eye']])
-            right_eye_heatmap = generate_heatmap(image, [landmarks[i] for i in FACIAL_LANDMARKS['right_eye']])
-            nose_heatmap = generate_heatmap(image, [landmarks[i] for i in FACIAL_LANDMARKS['nose_tip']])
-            mouth_heatmap = generate_heatmap(image, [landmarks[i] for i in FACIAL_LANDMARKS['mouth']])
-
-            heatmaps.extend([left_eye_heatmap, right_eye_heatmap, nose_heatmap, mouth_heatmap])
-
-        heatmaps_stack = np.stack(heatmaps, axis=0) 
-
-        image_normalized = image / 255.0
-        rgb_and_heatmaps = np.concatenate([image_normalized.transpose(2, 0, 1), heatmaps_stack], axis=0) 
-
-        file_name = os.path.basename(image_path).split('.')[0]
-        output_path = os.path.join(output_dir, f'{file_name}_rgb_heatmaps.npy')
-        np.save(output_path, rgb_and_heatmaps)
-        print(f"Processed and saved: {output_path}")
-    else:
-        print(f"No face landmarks detected in: {image_path}")
-
-def process_directory(input_dir, output_dir):
+def process_single_image(image_path, output_dir=None):
+    """Process a single image to generate heatmaps and save the results."""
     with mp_face_mesh.FaceMesh(
         max_num_faces=1, 
         refine_landmarks=True, 
         min_detection_confidence=0.5, 
         min_tracking_confidence=0.5) as face_mesh:
 
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        image = cv2.imread(image_path)
+        image = cv2.resize(image, (256, 256))  # Resize to 256x256
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        for file_name in os.listdir(input_dir):
-            file_path = os.path.join(input_dir, file_name)
-            if file_name.lower().endswith(('.png', '.jpg', '.jpeg')):
-                process_image(file_path, output_dir, face_mesh)
+        results = face_mesh.process(image_rgb)
+        heatmaps = []
 
+        if results.multi_face_landmarks:
+            for face_landmarks in results.multi_face_landmarks:
+                landmarks = [(lm.x, lm.y) for lm in face_landmarks.landmark]
 
+                # Generate heatmaps for each facial feature
+                left_eye_heatmap = generate_heatmap(image, [landmarks[i] for i in FACIAL_LANDMARKS['left_eye']])
+                right_eye_heatmap = generate_heatmap(image, [landmarks[i] for i in FACIAL_LANDMARKS['right_eye']])
+                nose_heatmap = generate_heatmap(image, [landmarks[i] for i in FACIAL_LANDMARKS['nose_tip']])
+                mouth_heatmap = generate_heatmap(image, [landmarks[i] for i in FACIAL_LANDMARKS['mouth']])
+
+                # Collect all heatmaps
+                heatmaps.extend([left_eye_heatmap, right_eye_heatmap, nose_heatmap, mouth_heatmap])
+
+            # Stack heatmaps and concatenate with the original image
+            heatmaps_stack = np.stack(heatmaps, axis=0) 
+            image_normalized = image / 255.0
+            rgb_and_heatmaps = np.concatenate([image_normalized.transpose(2, 0, 1), heatmaps_stack], axis=0)  # (7, 256, 256)
+
+            # Save the result as a .npy file
+            if output_dir:
+                file_name = os.path.basename(image_path).split('.')[0]
+                output_path = os.path.join(output_dir, f'{file_name}_rgb_heatmaps.npy')
+                np.save(output_path, rgb_and_heatmaps)
+                print(f"Processed and saved: {output_path}")
+            
+            return rgb_and_heatmaps
+        else:
+            print(f"No face landmarks detected in: {image_path}")
+
+# Example usage
 if __name__ == "__main__":
-    input_directory = 'E:/computer vision/facial_reconstruction_project/data/raw/high_quality_images/mugshot_frontal_original_all'  
-    output_directory = 'E:/computer vision/facial_reconstruction_project/data/rgb&heatMap/highres'  
-    process_directory(input_directory, output_directory)
-
-    low_res_dir = 'E:/computer vision/facial_reconstruction_project/data/raw/cctv_footage/surveillance_cameras_all'
-    output_directory = 'E:/computer vision/facial_reconstruction_project/data/rgb&heatMap/lowres'
-    process_directory(low_res_dir, output_directory)
+    image_path = 'E:/computer vision/facial_reconstruction_project/data/raw/high_quality_images/mugshot_frontal_original_all/sample.jpg'  # Path to the image
+    output_directory = 'E:/computer vision/facial_reconstruction_project/data/rgb&heatMap/highres'  # Output directory
+    process_single_image(image_path, output_directory)
