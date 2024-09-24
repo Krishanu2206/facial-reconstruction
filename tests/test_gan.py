@@ -23,12 +23,12 @@ class TestLoader(unittest.TestCase):
         generator model. The output should be a tensor of the same shape as the input.
         """
         
-        low_res_image = torch.randn((32, 3, 256, 256))  # Use torch.randn to create a random tensor with shape
+        low_res_image = torch.randn((32, 7, 256, 256))  # Use torch.randn to create a random tensor with shape
 
-        g_model = Generator()
+        g_model = Generator(c_dim=7)
         
         output = g_model(low_res_image)
-
+        # output = output[:3, :, :, :]
         self.assertTrue(output.shape == (32, 3, 256, 256))
 
     def test_discriminator_pass(self):
@@ -48,9 +48,17 @@ class TestLoader(unittest.TestCase):
         self.assertTrue(output.shape == (32, 1, 30, 30))
         
     def test_output_value(self):
-        low_res_image = torch.randn((32, 3, 256, 256))  # Use torch.randn to create a random tensor with shape
+        """
+        Test that the generator model does not produce any output values greater than 1.
+        
+        This is important because the output of the generator model is passed through the sigmoid activation function
+        in the discriminator. If the generator model produces values greater than 1, the sigmoid activation function
+        will produce NaNs and the training will fail. This test ensures that the generator model does not produce any
+        values greater than 1.
+        """
+        low_res_image = torch.randn((32, 7, 256, 256))  # Use torch.randn to create a random tensor with shape
 
-        g_model = Generator()
+        g_model = Generator(c_dim=7)
         
         output = g_model(low_res_image)
 
