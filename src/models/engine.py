@@ -69,17 +69,16 @@ class Engine:
             logging.info(f"{epoch+1}/{self.epochs} | Generator Train Loss: {g_loss} | Discriminator Train Loss {d_loss}")
             
             if g_loss < best:
-                self.save_model(self.g_model)
+                self.save_model(model=self.g_model)
                 best = g_loss
             
             if epoch % 20 == 0:
                 g_loss, d_loss = self._test_model()
                 logging.info(f"At epoch {epoch+1}: Generator Test Loss {g_loss} | Discriminator Test Loss {d_loss}")
         
-        self.save_model(self.g_model, model_name="last.pt")
+        self.save_model(model=self.g_model, model_name="last.pt")
     
-    @abstractmethod
-    def save_model(model: nn.Module, save_dir: str = "models/saved_models", model_name="best.pt"):
+    def save_model(self, model: nn.Module, save_dir: str = "models/saved_models", model_name="best.pt"):
         """
         Saves the model state dictionary to the specified save directory.
 
@@ -102,10 +101,11 @@ class Engine:
         """
         self.g_model.eval()
         self.d_model.eval()
+        running_gloss, running_dloss = 0, 0
         with torch.inference_mode():
             for low_res, high_res in tqdm(self.test_dataloader):
                 low_res = low_res.to(self.device)
-                real_images = high_res.to(self.device)
+                real_images = high_res[:, :3, :, :].to(self.device)
                 b_size = low_res.shape[0]    
                 
                 real_labels = torch.ones((b_size, 1, 30, 30))
@@ -117,7 +117,12 @@ class Engine:
                 g_loss = self._generator_loss(low_res=low_res,
                                           real_images=real_images, real_labels=real_labels)
                 
-                return g_loss, d_loss
+                running_dloss += d_loss
+                running_gloss += g_loss
+                
+            running_dloss /= len(self.test_dataloader)
+            running_gloss /= len(self.test_dataloader)
+            return running_gloss, running_dloss
                 
     def _discriminator_loss(self, low_res, real_images, real_labels, fake_labels):
         """
@@ -135,10 +140,10 @@ class Engine:
         Returns:
             d_loss (torch.Tensor): The discriminator loss
         """
-        real_patch = self.d_model(low_res, real_images)
+        real_patch = self.d_model(low_res[:, :3, :, :], real_images)
         
         fake_images = self.g_model(low_res.to(self.device))
-        fake_patch = self.d_model(low_res, fake_images)
+        fake_patch = self.d_model(low_res[:, :3, :, :], fake_images)
         
         d_loss_real = self.d_loss(real_patch, real_labels)
         d_loss_fake = self.d_loss(fake_patch, fake_labels)
@@ -162,7 +167,7 @@ class Engine:
             g_loss (torch.Tensor): The generator loss
         """
         fake_images = self.g_model(low_res)
-        fake_patch = self.d_model(low_res, fake_images)
+        fake_patch = self.d_model(low_res[:, :3, :, :], fake_images)
         
         ## to be explored further
         fake_gan_loss = self.d_loss(fake_patch, real_labels)
@@ -186,11 +191,12 @@ class Engine:
         
         for low_res, high_res in tqdm(self.train_dataloader):
             low_res = low_res.to(self.device)
-            real_images = high_res.to(self.device)
+
+            real_images = high_res[:, :3, :, :].to(self.device)
             b_size = low_res.shape[0]
             
-            real_labels = torch.ones((b_size, 1, 30, 30))
-            fake_labels = torch.zeros((b_size, 1, 30, 30))
+            real_labels = torch.ones((b_size, 1, 30, 30), dtype=torch.float32)
+            fake_labels = torch.zeros((b_size, 1, 30, 30), dtype=torch.float32)
             
             # train the discriminator
             d_loss = self._discriminator_loss(low_res=low_res, real_images=real_images, 

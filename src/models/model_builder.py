@@ -24,7 +24,7 @@ def tcnn_block(in_channels,out_channels,kernel_size,stride=1,padding=0,output_pa
        
        
 class Generator(nn.Module):
-    def __init__(self, c_dim: int = 3, gf_dim:int = 64):#input : 256x256
+    def __init__(self, c_dim: int = 7, gf_dim:int = 64):#input : 256x256
         super(Generator,self).__init__()
         self.e1 = cnn_block(c_dim,gf_dim,4,2,1, first_layer = True)
         self.e2 = cnn_block(gf_dim,gf_dim*2,4,2,1,)
@@ -45,7 +45,8 @@ class Generator(nn.Module):
         self.d8 = tcnn_block(gf_dim*1*2,c_dim,4,2,1, first_layer = True)#256x256
         self.tanh = nn.Tanh()
 
-    def forward(self,x):
+    def forward(self,x:torch.Tensor):
+        x = x.type(torch.float32)
         e1 = self.e1(x)
         e2 = self.e2(nn.LeakyReLU(0.2)(e1))
         e3 = self.e3(nn.LeakyReLU(0.2)(e2))
@@ -63,7 +64,7 @@ class Generator(nn.Module):
         d7 = torch.cat([self.d7(nn.ReLU()(d6)),e1],1)
         d8 = self.d8(nn.ReLU()(d7))
 
-        return self.tanh(d8)
+        return self.tanh(d8)[:, :3, :, :]
     
     
     
@@ -77,8 +78,11 @@ class Discriminator(nn.Module):
         self.conv5 = cnn_block(df_dim*8,1,4,1,1, first_layer=True)# 30 x 30
 
         self.sigmoid = nn.Sigmoid()
-    def forward(self, x, y):
+    def forward(self, x:torch.Tensor, y:torch.Tensor):
+        x, y = x.type(torch.float32), y.type(torch.float32)
         O = torch.cat([x,y],dim=1)
+        if O.shape[1] != 6:
+            print( f"{O.shape}, {x.shape},{ y.shape}")
         O = nn.LeakyReLU(0.2)(self.conv1(O))
         O = nn.LeakyReLU(0.2)(self.conv2(O))
         O = nn.LeakyReLU(0.2)(self.conv3(O))

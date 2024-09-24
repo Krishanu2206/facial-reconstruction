@@ -23,8 +23,8 @@ logging.basicConfig(level=logging.INFO,
 device = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info(f"Using Device: {device}")
 
-BATCH_SIZE = 32
-EPOCHS = 100
+BATCH_SIZE = 2
+EPOCHS = 10
 
 
 def init_model():
@@ -53,6 +53,7 @@ def init_model():
 
         train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
         test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        
 
     except Exception as e:
         logging.error(f"Error creating datasets or dataloaders: {str(e)}")
