@@ -40,22 +40,32 @@ class CreateDataset(Dataset):
 
         low_res_img = np.load(low_res_image_path)
         high_res_img = np.load(high_image_path)
-
+        
         if self.transform:
             low_res_img = self.transform.process(low_res_img)
         if self.target_transform:
             high_res_img = self.target_transform.process(high_res_img)
-
+            
         return low_res_img, high_res_img
     
     
 if __name__ == "__main__":
     from preprocess import ProcessFeatures, ProcessTarget
-    dataset = CreateDataset(
-        lowResImagesPath="data/rgb&heatMap/lowres",
-        highResImagesPath="data/rgb&heatMap/highres",
+    train_dataset = CreateDataset(
+        lowResImagesPath="data/processed/train/low_res",
+        highResImagesPath="data/processed/train/high_res",
         feature_transform=ProcessFeatures,
         target_transform=ProcessTarget
     )
+    
+    test_dataset = CreateDataset(lowResImagesPath="data/processed/test/low_res",
+                    highResImagesPath="data/processed/test/high_res",
+                    feature_transform=ProcessFeatures,
+                    target_transform=ProcessTarget)
 
-    print(len(dataset))
+    
+    for low, high in train_dataset:
+        print(low.shape, high.shape)
+        
+    for low, high in test_dataset:
+        print(low.shape, high.shape)

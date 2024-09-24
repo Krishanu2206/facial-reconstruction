@@ -12,9 +12,10 @@ def setup_data(lowResImagesPath, highResImagesPath, train_dir, test_dir):
     train_dir.mkdir(exist_ok=True, parents=True)
     test_dir.mkdir(exist_ok=True, parents=True)
 
+    print(len(highResImages))
     #################
     # because of memory constrain
-    highResImages = random.sample(highResImages, k=10)
+    highResImages = random.sample(highResImages, k=6)
     #################
     
     # Splitting high-res images
@@ -23,7 +24,7 @@ def setup_data(lowResImagesPath, highResImagesPath, train_dir, test_dir):
 
     # Matching low-res images to high-res splits
     train_low_res = [img for img in lowResImages if highResImagesPath / (img.stem.split("_")[0] + "_frontal_rgb_heatmaps" + img.suffix) in train_high_res]
-    test_low_res = [img for img in lowResImages if img not in train_low_res]
+    test_low_res = [img for img in lowResImages if highResImagesPath / (img.stem.split("_")[0] + "_frontal_rgb_heatmaps" + img.suffix) in test_high_res]
 
     print(f"Train high-res: {len(train_high_res)}, Test high-res: {len(test_high_res)}")
     print(f"Train low-res: {len(train_low_res)}, Test low-res: {len(test_low_res)}")
@@ -49,23 +50,23 @@ def copy_files(src, dest):
             print(f"From {file} to {dest_file_path}")
 
 if __name__ == "__main__":
-    # lowResImagesPath = Path("data/rgb&heatMap/lowres")
-    # highResImagesPath = Path("data/rgb&heatMap/highres")
-    # train_dir = Path("data/processed/train")
-    # test_dir = Path("data/processed/test")
+    lowResImagesPath = Path("data/rgb&heatMap/lowres")
+    highResImagesPath = Path("data/rgb&heatMap/highres")
+    train_dir = Path("data/processed/train")
+    test_dir = Path("data/processed/test")
 
-    # use argparse to take these 4 arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--lowResImagesPath", type=str, required=True)
-    parser.add_argument("--highResImagesPath", type=str, required=True)
-    parser.add_argument("--train_dir", type=str, required=True)
-    parser.add_argument("--test_dir", type=str, required=True)
-    args = parser.parse_args()
+    # # use argparse to take these 4 arguments
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--lowResImagesPath", type=str, required=True)
+    # parser.add_argument("--highResImagesPath", type=str, required=True)
+    # parser.add_argument("--train_dir", type=str, required=True)
+    # parser.add_argument("--test_dir", type=str, required=True)
+    # args = parser.parse_args()
 
-    lowResImagesPath = Path(args.lowResImagesPath)
-    highResImagesPath = Path(args.highResImagesPath)
-    train_dir = Path(args.train_dir)
-    test_dir = Path(args.test_dir)
+    # lowResImagesPath = Path(args.lowResImagesPath)
+    # highResImagesPath = Path(args.highResImagesPath)
+    # train_dir = Path(args.train_dir)
+    # test_dir = Path(args.test_dir)
     
 
     setup_data(lowResImagesPath, highResImagesPath, train_dir, test_dir)

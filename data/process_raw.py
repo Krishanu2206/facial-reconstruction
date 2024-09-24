@@ -49,7 +49,7 @@ def process_image(image_path, output_dir, face_mesh):
 
         image_normalized = image / 255.0
         rgb_and_heatmaps = np.concatenate([image_normalized.transpose(2, 0, 1), heatmaps_stack], axis=0) 
-
+        
         file_name = os.path.basename(image_path).split('.')[0]
         output_path = os.path.join(output_dir, f'{file_name}_rgb_heatmaps.npy')
         np.save(output_path, rgb_and_heatmaps)
@@ -75,15 +75,16 @@ def process_directory(input_dir, output_dir):
 
 if __name__ == "__main__":
     # use argparse to take dirs as args 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, required=True)
-    parser.add_argument("--output_dir", type=str, required=True)
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--input_dir", type=str, required=True)
+    # parser.add_argument("--output_dir", type=str, required=True)
+    # args = parser.parse_args()
     
     
-    # input_directory = 'E:/computer vision/facial_reconstruction_project/data/raw/high_quality_images/mugshot_frontal_original_all'  
-    # output_directory = 'E:/computer vision/facial_reconstruction_project/data/rgb&heatMap/highres'  
-    process_directory(args.input_dir, args.output_dir)
+    input_directory = 'E:/computer vision/facial_reconstruction_project/data/raw/high_quality_images/mugshot_frontal_original_all'  
+    output_directory = 'E:/computer vision/facial_reconstruction_project/data/rgb&heatMap/highres'  
+    process_directory(input_directory, output_directory)
 
-    # low_res_dir = 'E:/computer vision/facial_reconstruction_project/data/raw/cctv_footage/surveillance_cameras_all'
-    # output_directory = 'E:/computer vision/facial_reconstruction_project/data/rgb&heatMap/lowres'
+    low_res_dir = 'E:/computer vision/facial_reconstruction_project/data/raw/cctv_footage/surveillance_cameras_all'
+    output_directory = 'E:/computer vision/facial_reconstruction_project/data/rgb&heatMap/lowres'
+    process_directory(low_res_dir, output_directory)
