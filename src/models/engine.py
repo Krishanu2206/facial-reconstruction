@@ -24,6 +24,7 @@ class Engine:
                  d_optimizer: torch.optim,
                  train_dataloader: DataLoader,
                  test_dataloader: DataLoader,
+                 content_weight: float,
                  device: torch.device,
                  epochs: int) -> None:
         
@@ -50,6 +51,7 @@ class Engine:
         self.d_optimizer = d_optimizer
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
+        self.content_weight = content_weight
         self.device = device
         self.epochs = epochs
         
@@ -114,7 +116,7 @@ class Engine:
                 d_loss = self._discriminator_loss(low_res=low_res, real_images=real_images, 
                                               real_labels=real_labels, fake_labels=fake_labels) 
                 
-                g_loss = self._generator_loss(low_res=low_res,
+                g_loss, fake_images = self._generator_loss(low_res=low_res,
                                           real_images=real_images, real_labels=real_labels)
                 
                 running_dloss += d_loss
@@ -142,21 +144,21 @@ class Engine:
         """
         real_patch = self.d_model(low_res[:, :3, :, :], real_images)
         
-        fake_images = self.g_model(low_res.to(self.device))
+        with torch.no_grad():
+            fake_images = self.g_model(low_res.to(self.device))
         fake_patch = self.d_model(low_res[:, :3, :, :], fake_images)
         
         d_loss_real = self.d_loss(real_patch, real_labels)
         d_loss_fake = self.d_loss(fake_patch, fake_labels)
-        d_loss = d_loss_real + d_loss_fake
+        d_loss = (d_loss_real + d_loss_fake) / 2
         
         return d_loss
 
     def _generator_loss(self, low_res, real_images, real_labels):
         """
         Calculate the generator loss. This function takes in the low-resolution images, real
-        high-resolution images, and real labels. It calculates the generator loss
-        by passing the fake images through the discriminator and calculating the binary
-        cross-entropy loss.
+        high-resolution images, and real labels. It calculates the generator loss by passing the
+        fake images through the discriminator and calculating the binary cross-entropy loss.
 
         Args:
             low_res (torch.Tensor): Low-resolution images
@@ -164,16 +166,16 @@ class Engine:
             real_labels (torch.Tensor): Real labels
 
         Returns:
-            g_loss (torch.Tensor): The generator loss
+            tuple: (generator loss, fake images)
         """
         fake_images = self.g_model(low_res)
         fake_patch = self.d_model(low_res[:, :3, :, :], fake_images)
         
         ## to be explored further
-        fake_gan_loss = self.d_loss(fake_patch, real_labels)
-        real_gan_loss = self.g_loss(fake_images, real_images)
-        g_loss = fake_gan_loss + real_gan_loss
-        return g_loss
+        adversarial_loss = self.d_loss(fake_patch, real_labels)
+        content_loss = self.g_loss(fake_images, real_images)
+        g_loss = adversarial_loss + self.content_weight * content_loss
+        return g_loss, fake_images
         
     def _train_one_epoch(self):
         """
@@ -191,29 +193,29 @@ class Engine:
         
         for low_res, high_res in tqdm(self.train_dataloader):
             low_res = low_res.to(self.device)
-
             real_images = high_res[:, :3, :, :].to(self.device)
             b_size = low_res.shape[0]
             
-            real_labels = torch.ones((b_size, 1, 30, 30), dtype=torch.float32)
-            fake_labels = torch.zeros((b_size, 1, 30, 30), dtype=torch.float32)
+            real_labels = torch.ones((b_size, 1, 30, 30), dtype=torch.float32) * 0.9
+            fake_labels = torch.zeros((b_size, 1, 30, 30), dtype=torch.float32) * 0.1
+            
             
             # train the discriminator
+            self.d_optimizer.zero_grad()
             d_loss = self._discriminator_loss(low_res=low_res, real_images=real_images, 
                                               real_labels=real_labels, fake_labels=fake_labels)
-            per_epoch_loss_d += d_loss
-            
-            self.d_optimizer.zero_grad()
             d_loss.backward()
             self.d_optimizer.step()
             
             # train the generator
-            g_loss = self._generator_loss(low_res=low_res,
-                                          real_images=real_images, real_labels=real_labels)
-            per_epoch_loss_g += g_loss
-            
             self.g_optimizer.zero_grad()
+            g_loss, fake_images = self._generator_loss(low_res=low_res,
+                                          real_images=real_images, real_labels=real_labels)
             g_loss.backward()
             self.g_optimizer.step()
             
+            per_epoch_loss_g += g_loss.item()
+            per_epoch_loss_d += d_loss.item()
+            
         return per_epoch_loss_g / len(self.train_dataloader), per_epoch_loss_d / len(self.train_dataloader)
+            
