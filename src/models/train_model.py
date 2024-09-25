@@ -35,7 +35,7 @@ def init_model():
     g_loss = nn.L1Loss()
 
     g_optimizer = torch.optim.Adam(g_model.parameters(), lr=0.0002, betas=(0.5, 0.999))
-    d_optimizer = torch.optim.Adam(d_model.parameters(), lr=0.0002, betas=(0.5, 0.999))
+    d_optimizer = torch.optim.Adam(d_model.parameters(), lr=0.00001, betas=(0.5, 0.999))
 
     try:
         train_dataset = CreateDataset(lowResImagesPath="data/processed/train/low_res",
@@ -63,6 +63,7 @@ def init_model():
                 g_loss=g_loss, d_loss=d_loss,
                 g_optimizer=g_optimizer, d_optimizer=d_optimizer,
                 train_dataloader=train_loader, test_dataloader=test_loader,
+                content_weight=0.001,
                 device=device, epochs=EPOCHS)
 
     return engine
