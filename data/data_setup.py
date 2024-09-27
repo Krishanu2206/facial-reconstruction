@@ -15,7 +15,7 @@ def setup_data(lowResImagesPath, highResImagesPath, train_dir, test_dir):
     print(len(highResImages))
     #################
     # because of memory constrain
-    highResImages = random.sample(highResImages, k=6)
+    highResImages = random.sample(highResImages, k=12)
     #################
     
     # Splitting high-res images
@@ -45,7 +45,7 @@ def copy_files(src, dest):
         dest_file_path = dest / file.name
         shutil.copy(str(file), str(dest_file_path))
 
-        if idx % 100 == 0:
+        if idx % 10 == 0:
             print(f"Completed copying file {idx + 1}/{len(src)}")
             print(f"From {file} to {dest_file_path}")
 

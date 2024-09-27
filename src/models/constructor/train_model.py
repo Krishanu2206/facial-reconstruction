@@ -9,9 +9,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from src.data.make_dataset import CreateDataset
-from src.models.model_builder import Generator, Discriminator
+from models.constructor.model_builder import UnetGenerator, Discriminator
 from src.data.preprocess import ProcessFeatures, ProcessTarget
-from src.models.engine import Engine
+from models.constructor.engine import Engine
 
 
 # add logging basic config
@@ -28,7 +28,7 @@ EPOCHS = 10
 
 
 def init_model():
-    g_model = Generator(c_dim=7).to(device)
+    g_model = generator = UnetGenerator(input_nc=3, output_nc=3, num_downs=8, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False)
     d_model = Discriminator().to(device)
 
     d_loss = nn.BCELoss()

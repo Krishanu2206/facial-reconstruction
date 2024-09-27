@@ -10,8 +10,8 @@ class CreateDataset(Dataset):
         self.lowResImagesPath = Path(lowResImagesPath)
         self.highResImagesPath = Path(highResImagesPath)
         
-        print(f"Low-res path: {self.lowResImagesPath}")
-        print(f"High-res path: {self.highResImagesPath}")
+        # print(f"Low-res path: {self.lowResImagesPath}")
+        # print(f"High-res path: {self.highResImagesPath}")
         
         self.lowResImages = [f for f in os.listdir(lowResImagesPath) if f.endswith('.npy')]
         self.highResImages = [f for f in os.listdir(highResImagesPath) if f.endswith('.npy')]

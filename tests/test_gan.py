@@ -7,7 +7,7 @@ import logging
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.models.model_builder import Generator, Discriminator
+from models.constructor.model_builder import Generator, Discriminator
 
 logging.basicConfig(level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",

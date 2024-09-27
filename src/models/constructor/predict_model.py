@@ -8,7 +8,7 @@ matplotlib.use('Agg')
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models.model_builder import Generator
+from models.constructor.model_builder import Generator
 from data.preprocess import ProcessFeatures
 from face_annot.annot_module import process_single_image
 
