@@ -1,16 +1,15 @@
 import cv2
 import torch
 import numpy as np
-from pathlib import Path
 from torch import nn
+from pathlib import Path
 from ultralytics import YOLO
 import torch.nn.functional as F
+from torchvision import transforms
 import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Assuming you have these imports from your model architectures
 from src.models import StackedRefinementSR, UnetGenerator, RefinementNetwork
 
 def load_stacked_model(model_path):
@@ -25,12 +24,25 @@ def load_yolo_model(model_path):
     return YOLO(model_path)
 
 def preprocess_image(image, device):
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image = image.astype(np.float32) / 255.0
-    image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
-    return image.to(device)
+    # Define the transformations
+    transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((256, 256)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    
+    # Apply transformations
+    image = transform(image).unsqueeze(0).to(device)
+    return image
 
 def postprocess_image(image):
+    # Denormalize
+    mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).to(image.device)
+    std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1).to(image.device)
+    image = image * std + mean
+    
+    # Convert to numpy and adjust range
     image = image.squeeze().permute(1, 2, 0).cpu().numpy()
     image = (image * 255).clip(0, 255).astype(np.uint8)
     return cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -80,7 +92,7 @@ def main():
     
     stacked_model_path = "models/saved_models/stacked_model.pth"
     yolo_model_path = "models/saved_models/yolov8n.pt"
-    video_path = "data/inference/video.mp4"
+    video_path = "data/external/video.mp4"
     output_dir = "data/output"
 
     stacked_model = load_stacked_model(stacked_model_path).to(device)

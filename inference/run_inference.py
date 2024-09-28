@@ -1,102 +1,116 @@
+import cv2
+import numpy as np
 import torch
-from torch import nn
+import torch.nn as nn
 from torchvision import transforms
-from glob import glob
+import os
+import argparse
+from yolov8_face import YOLOv8_face  # Assuming the YOLOv8_face class is in a file named yolov8_face.py
 import sys
 import os
-import random
-from PIL import Image
-from pathlib import Path
-import matplotlib
-matplotlib.use('Agg')  # Set the backend to Agg (non-GUI)
-from matplotlib import pyplot as plt
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models.constructor.model_builder import UnetGenerator
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-num_of_images = 1
-image_path = Path("data/raw/zip/SCface_database/surveillance_cameras_all")
-gt_path = Path('data/raw/zip/SCface_database/mugshot_frontal_original_all')
+# Import your GAN model components
+from src.models import UnetGenerator, RefinementNetwork, StackedRefinementSR
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def load_images_and_gt(images_path, gt_path):
-    images = glob(pathname='*.jpg', root_dir=images_path)
-    images = random.sample(images, k=num_of_images) 
-    gts = [img.split('_')[0] + '_frontal.jpg' for img in images]
+def load_stacked_model(model_path):
+    generator = UnetGenerator(input_nc=3, output_nc=3, num_downs=8, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False)
+    refinement_net = RefinementNetwork()
+    stacked_model = StackedRefinementSR(generator, refinement_net)
+    stacked_model.load_state_dict(torch.load(model_path), map_location=device)
+    stacked_model.eval()
+    return stacked_model
+
+def preprocess_for_gan(image):
+    # Convert to RGB if necessary
+    if len(image.shape) == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+    elif image.shape[2] == 4:
+        image = cv2.cvtColor(image, cv2.COLOR_BGRA2RGB)
+    elif image.shape[2] == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
-    images = [Image.open(image_path / img) for img in images]
-    gts = [Image.open(gt_path / img) for img in gts]
+    # Resize to 256x256
+    image = cv2.resize(image, (256, 256))
     
-    return images, gts
-
-
-def load_model():
-    model_path = 'models/saved_models/generator_best_30.pth'
-    model = UnetGenerator(input_nc=3, output_nc=3, num_downs=8, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False)
-    model.load_state_dict(torch.load(model_path, map_location=device))
-    return model
-
-
-def inference(model, images, gts):
+    # Convert to PyTorch tensor and normalize
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Resize((256, 256)),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     ])
-    preds = []
-    model.eval()
-    model.to(device)
-    for i in range(num_of_images):
-        img = images[i]
-        gt = gts[i]
+    return transform(image).unsqueeze(0)
 
-        img = transform(img)
-        img = img.unsqueeze(0)
-        img = img.to(device)
+def denormalize(tensor):
+    return (tensor * 0.5 + 0.5).clamp(0, 1)
 
-        pred = model(img)
-        pred = pred.squeeze(0)
-        pred = pred.permute(1, 2, 0)
-        pred = pred.cpu().detach().numpy()
-        pred = (pred * 255).astype('uint8')
-
-        gt = transforms.ToTensor()(gt)
-        gt = transforms.Resize((256, 256))(gt)
-        gt = gt.permute(1, 2, 0)
-        gt = gt.cpu().detach().numpy()
-        gt = (gt * 255).astype('uint8')
-
-        preds.append(pred)
-    return preds
+def process_video(video_path, face_model, gan_model, output_dir):
+    cap = cv2.VideoCapture(video_path)
     
-
-def plot_images(images, preds, gts):
-    fig, axs = plt.subplots(num_of_images, 3, figsize=(15, 5*num_of_images))
-    
-    if num_of_images == 1:
-        axs = [axs]  # Make axs iterable when there's only one row
-    
-    for i in range(num_of_images):
-        axs[i][0].imshow(images[i])
-        axs[i][0].set_title('Input Image')
-        axs[i][0].axis('off')
+    frame_count = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
         
-        axs[i][1].imshow(preds[i])
-        axs[i][1].set_title('Predicted Image')
-        axs[i][1].axis('off')
+        # Detect faces
+        boxes, scores, classids, kpts = face_model.detect(frame)
         
-        axs[i][2].imshow(gts[i])
-        axs[i][2].set_title('Ground Truth')
-        axs[i][2].axis('off')
+        for i, box in enumerate(boxes):
+            x, y, w, h = box.astype(int)
+            face = frame[y:y+h, x:x+w]
+            
+            # Preprocess face for GAN
+            face_tensor = preprocess_for_gan(face)
+            
+            # Pass through GAN
+            with torch.no_grad():
+                enhanced_face_tensor = gan_model(face_tensor)
+            
+            # Denormalize and convert back to numpy array
+            enhanced_face = denormalize(enhanced_face_tensor[0]).permute(1, 2, 0).numpy()
+            enhanced_face = (enhanced_face * 255).astype(np.uint8)
+            enhanced_face = cv2.cvtColor(enhanced_face, cv2.COLOR_RGB2BGR)
+            
+            # Save enhanced face
+            os.makedirs(output_dir, exist_ok=True)
+            cv2.imwrite(os.path.join(output_dir, f'enhanced_face_{frame_count}_{i}.jpg'), enhanced_face)
+        
+        # Draw bounding boxes on the frame
+        frame_with_detections = face_model.draw_detections(frame, boxes, scores, kpts)
+        
+        # Display the frame
+        cv2.imshow('Face Detection', frame_with_detections)
+        
+        frame_count += 1
+        
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    
+    cap.release()
+    cv2.destroyAllWindows()
 
-    plt.tight_layout()
-    plt.savefig('inference/inference.png')
-    plt.close()  # Close the figure to free up memory
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--videopath', type=str, default='data/external/cctv1.mp4', help="video path")
+    parser.add_argument('--yolo_modelpath', type=str, default='models/saved_models/yolov8n-face.onnx', help="YOLO onnx filepath")
+    parser.add_argument('--gan_modelpath', type=str, default='models/saved_models/gan_model.pth', help="GAN model filepath")
+    parser.add_argument('--output_dir', type=str, default='data/output', help="Output directory for enhanced faces")
+    parser.add_argument('--confThreshold', default=0.45, type=float, help='class confidence')
+    parser.add_argument('--nmsThreshold', default=0.5, type=float, help='nms iou thresh')
+    args = parser.parse_args()
 
-if __name__ == '__main__':
-    images, gts = load_images_and_gt(image_path, gt_path)
-    model = load_model()
-    preds = inference(model, images, gts)
-    plot_images(images, preds, gts)
-    print("Inference complete. Image saved as 'inference/inference.png'")
+    # Initialize YOLOv8_face object detector
+    face_model = YOLOv8_face(args.yolo_modelpath, conf_thres=args.confThreshold, iou_thres=args.nmsThreshold)
+    
+    # Load GAN model
+    gan_model = load_stacked_model(args.gan_modelpath)
+    
+    # Process video
+    process_video(args.videopath, face_model, gan_model, args.output_dir)
+
+if __name__ == "__main__":
+    main()
